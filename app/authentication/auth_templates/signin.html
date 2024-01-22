@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/styles.css">
+    <title>Sign In</title>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <!-- Logo placeholder -->
+        </div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('auth.signin') }}">Sign In</a></li>
+            <li><a href="{{ url_for('auth.signup') }}">Sign Up</a></li>
+            <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+    {% with messages = get_flashed_messages(category_filter=["success"]) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for message in messages %}
+                    <div class="alert alert-success">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    <div class="signup-home" >
+        <h1>Sign In</h1>
+        <div id="sign-in" style="margin-bottom: 70px;">
+            <form action="/signin" method="POST">
+                {{ form.csrf_token }}
+                {{ form.email.label }} {{ form.email() }}<br><br>
+                {{ form.password.label }} {{ form.password() }}<br><br>
+                {{ form.submit() }}
+            </form>
+        </div>
+    </div>
+    
+</body>
+</html>
+
