@@ -46,21 +46,18 @@ class User(db.Model, UserMixin):
 class Meme(db.Model):
     __tablename__ = 'memes'
     meme_id = db.Column(db.Integer, primary_key=True)
-    meme_name = db.Column(db.String(50), nullable=False)
     img_id = db.Column(db.Integer, db.ForeignKey('images.id'), nullable=False)
     meme_caption = db.Column(db.String(50), nullable=False)
     date_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     
 
-    def __init__(self, meme_name, img_id, meme_caption):
-        self.meme_name = meme_name
+    def __init__(self, img_id, meme_caption):
         self.img_id = img_id
         self.meme_caption = meme_caption
     
     def serialize(self):
         return {
             'meme_id': self.meme_id,
-            'meme_name': self.meme_name,
             'img_id': self.img_id,
             'meme_caption': self.meme_caption,
             'date_created': self.date_created,
@@ -68,8 +65,7 @@ class Meme(db.Model):
         }
       
 
-    def __repr__(self):
-        return f"<Meme {self.meme_name}>"
+
     
 
 

@@ -1,27 +1,25 @@
+from flask import request, jsonify
 from functools import wraps
-import secrets
-from flask import request, jsonify, json
-import decimal
-from models import User
+import firebase_admin
+from firebase_admin import auth
+import logging
 
-def token_required(our_flask_function):
-    @wraps(our_flask_function)
-    def decorated(*args, **kwargs):
-        token = None
+def verify_firebase_token(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"error": "Authorization header is missing or not valid."}), 401
 
-        if 'x-access-token' in request.headers:
-            token = request.headers['x-access-token']
-        if not token:
-            return jsonify({'message': 'Token is missing.'}), 401
+        id_token = auth_header.split('Bearer ')[1]
 
         try:
-            current_user_token = User.query.filter_by(token = token).first()
-            print(token)
-            print(current_user_token)
-        except:
-            owner=User.query.filter_by(token=token).first()
+            auth.verify_id_token(id_token)
+        except Exception as e:
+            logging.error(f"Firebase token verification failed: {e}")
+            return jsonify({"error": "Invalid or expired Firebase ID token.", "details": str(e)}), 403
 
-            if token != owner.token and secrets.compare_digest(token, owner.token):
-                return jsonify({'message': 'Token is invalid'})
-        return our_flask_function(current_user_token, *args, **kwargs)
-    return decorated
+        return f(*args, **kwargs)
+    return decorated_function
+
+

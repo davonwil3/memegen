@@ -9,59 +9,55 @@ from models import db
 from ..api.routes import site
 
 
-auth = Blueprint("auth", __name__, template_folder="auth_templates")
+auth_blueprint = Blueprint("auth", __name__, template_folder="auth_templates")
 
 
-@auth.route("/", methods=["GET", "POST"])
-@auth.route("/signup", methods=["GET", "POST"])
+
+@auth_blueprint.route("/signup", methods=["POST"])
 def signup():
-    form = UserSignupForm()
-    if request.method == "POST" and form.validate_on_submit():
-        first_name = form.first_name.data
-        last_name = form.last_name.data
-        email = form.email.data
-        password = form.password.data
-        print(email, password)
+    data = request.get_json()
+    firstName = data.get("firstName")
+    lastName = data.get("lastName")
+    email = data.get("email")
+    password = data.get("password")
 
-        user = User(first_name, last_name, email, password)
+    if not all([firstName, lastName, email, password]):
+        return jsonify({"message": "Missing fields"}), 400
 
-        db.session.add(user)
-        db.session.commit()
+    user_exists = User.query.filter_by(email=email).first() is not None
+    if user_exists:
+        return jsonify({"message": "Email already registered"}), 409
 
-        print("User added to DB:", user.email)
+  
+    user = User(first_name=firstName, last_name=lastName, email=email, password=password)
+    db.session.add(user)
+    db.session.commit()
 
-        flash(f"You have successfully created a user account {email}", "user-created")
-        return redirect(url_for("auth.signin")) 
-    return render_template("signup.html", form=form)
+    return jsonify({"message": f"User account {email} created successfully"}), 201
 
-@auth.route("/signin", methods=["GET", "POST"])
+
+@auth_blueprint.route("/signin", methods=["POST"])
 def signin():
-    form = UserLoginForm()
-    if request.method == "POST" and form.validate_on_submit():
-        email = form.email.data
-        password = form.password.data
-        print("Received credentials:", email, password)
+    
+    data = request.get_json()
 
-        logged_user = User.query.filter(User.email == email).first()
-        print("Found user:", logged_user, logged_user.password)
-        if logged_user and check_password_hash(logged_user.password, password):
-            login_user(logged_user, remember=True)
-            print("User logged in:", current_user)
-            flash("You were successfully logged in", "auth-success")
-            return redirect(url_for("site.profile"))  # Check the route name here
-        else:
-            flash("Your Email/Password is incorrect", "auth-failed")
-            print("User not found")
-            return redirect(url_for("auth.signin"))
-    print("error")
+    email = data.get("email")
+    password = data.get("password")
+    print("Received credentials:", email, password)
 
-    return render_template("signin.html", form=form)
-
+    # Authenticate the user
+    logged_user = User.query.filter_by(email=email).first()
+    if logged_user and check_password_hash(logged_user.password, password):
+        # Create JWT token
+        expires = datetime.timedelta(days=7)  # Token expires in one week
+        access_token = create_access_token(identity=email, expires_delta=expires)
+        
+        print("User logged in:", logged_user.email)
+        return jsonify({"access_token": access_token, "message": "Login successful"}), 200
+    else:
+        print("Authentication failed")
+        return jsonify({"message": "Email or Password is incorrect"}), 401
 
 
-@auth.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    flash("You have successfully logged out", "logout-success")
-    return redirect(url_for("auth.signin"))
+
+
